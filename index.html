@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Wichtig für iPhone -->
+    <meta name="viewport"
+          content="width=device-width,
+                   initial-scale=1.0,
+                   maximum-scale=1.0,
+                   user-scalable=no">
+
+    <meta name="theme-color" content="#0E686A">
+
+    <title>Mein Wochenbudget</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- Kopfbereich -->
+        <header class="header">
+            <div>
+                <div class="small-title">MEIN</div>
+                <h1>Wochenbudget</h1>
+            </div>
+
+            <div class="wallet-icon">
+                €
+            </div>
+        </header>
+
+
+        <!-- Übersicht -->
+        <section class="overview">
+
+            <div class="card">
+                <span class="card-title">WOCHENBUDGET</span>
+                <strong id="budget">50,00 €</strong>
+            </div>
+
+            <div class="card">
+                <span class="card-title">AUSGEGEBEN</span>
+                <strong id="ausgegeben">0,00 €</strong>
+            </div>
+
+            <div class="card available-card">
+                <span class="card-title">VERFÜGBAR</span>
+                <strong id="verfuegbar">50,00 €</strong>
+            </div>
+
+        </section>
+
+
+        <!-- Status -->
+        <div id="status" class="status">
+            Dein Budget ist bereit.
+        </div>
+
+
+        <!-- Budget ändern -->
+        <button id="budgetButton" class="main-button">
+            ＋ Wochenbudget festlegen
+        </button>
+
+
+        <!-- Neue Ausgabe -->
+        <section class="expense-card">
+
+            <h2>Neue Ausgabe</h2>
+
+            <input
+                id="beschreibung"
+                type="text"
+                placeholder="Wofür hast du Geld ausgegeben?"
+                autocomplete="off"
+            >
+
+            <input
+                id="datum"
+                type="date"
+            >
+
+            <input
+                id="betrag"
+                type="text"
+                inputmode="decimal"
+                placeholder="Betrag, z. B. 4,50 €"
+                autocomplete="off"
+            >
+
+            <button id="addButton" class="add-button">
+                Ausgabe hinzufügen
+            </button>
+
+        </section>
+
+
+        <!-- Ausgaben -->
+        <section class="expenses-section">
+
+            <div class="section-title">
+                <h2>Meine Ausgaben</h2>
+                <span id="anzahlAusgaben">0</span>
+            </div>
+
+            <div id="ausgabenListe" class="expenses-list">
+                <div class="empty">
+                    Noch keine Ausgaben.
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- Aktionen -->
+        <section class="actions">
+
+            <button id="editButton" class="action-button">
+                ✏️ Bearbeiten
+            </button>
+
+            <button id="deleteButton" class="action-button delete">
+                🗑️ Löschen
+            </button>
+
+            <button id="newWeekButton" class="action-button">
+                🔄 Neue Woche
+            </button>
+
+        </section>
+
+    </div>
+
+
+    <!-- Budget-Dialog -->
+    <div id="budgetModal" class="modal hidden">
+
+        <div class="modal-content">
+
+            <h2>Wochenbudget</h2>
+
+            <p>
+                Wie viel möchtest du diese Woche zur Verfügung haben?
+            </p>
+
+            <input
+                id="neuesBudget"
+                type="text"
+                inputmode="decimal"
+                placeholder="z. B. 50,00 €"
+            >
+
+            <div class="modal-buttons">
+
+                <button id="cancelBudget" class="cancel-button">
+                    Abbrechen
+                </button>
+
+                <button id="saveBudget" class="confirm-button">
+                    Speichern
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Bearbeiten-Dialog -->
+    <div id="editModal" class="modal hidden">
+
+        <div class="modal-content">
+
+            <h2>Ausgabe bearbeiten</h2>
+
+            <input
+                id="editBeschreibung"
+                type="text"
+                placeholder="Beschreibung"
+            >
+
+            <input
+                id="editDatum"
+                type="date"
+            >
+
+            <input
+                id="editBetrag"
+                type="text"
+                inputmode="decimal"
+                placeholder="Betrag"
+            >
+
+            <div class="modal-buttons">
+
+                <button id="cancelEdit" class="cancel-button">
+                    Abbrechen
+                </button>
+
+                <button id="saveEdit" class="confirm-button">
+                    Speichern
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "Mein Wochenbudget",
+  "short_name": "Wochenbudget",
+  "description": "Meine persönliche Wochenbudget-App",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F3F7F7",
+  "theme_color": "#0E686A",
+  "orientation": "portrait",
+  "lang": "de-DE"
+}
