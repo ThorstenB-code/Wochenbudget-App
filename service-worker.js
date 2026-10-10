@@ -1,4 +1,4 @@
-const CACHE_NAME = "wochenbudget-v1";
+const CACHE_NAME = "wochenbudget-v13";
 
 const DATEIEN = [
     "./",

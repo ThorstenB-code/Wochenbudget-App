@@ -4,10 +4,15 @@
 
 // Standardwerte
 const STANDARD_BUDGET = 50.00;
+const DATEN_VERSION = 5;
 
 let daten = {
+    datenVersion: DATEN_VERSION,
     budget: STANDARD_BUDGET,
-    ausgaben: []
+    wochenBudget: STANDARD_BUDGET,
+    uebertrag: 0,
+    ausgaben: [],
+    wochenHistorie: []
 };
 
 let ausgewaehlteAusgabe = null;
@@ -79,6 +84,53 @@ function datenLaden() {
 
             if (Array.isArray(geladen.ausgaben)) {
                 daten.ausgaben = geladen.ausgaben;
+            }
+
+            if (Array.isArray(geladen.wochenHistorie)) {
+                daten.wochenHistorie = geladen.wochenHistorie;
+            }
+
+            if (typeof geladen.wochenBudget === "number") {
+                daten.wochenBudget = geladen.wochenBudget;
+                daten.uebertrag = typeof geladen.uebertrag === "number"
+                    ? geladen.uebertrag
+                    : 0;
+            } else {
+                // Ältere Daten speichern noch kein separates Wochenbudget.
+                const letzteWoche = daten.wochenHistorie[0];
+                const alterUebertrag = letzteWoche && typeof letzteWoche.uebertrag === "number"
+                    ? letzteWoche.uebertrag
+                    : 0;
+
+                if (letzteWoche && typeof letzteWoche.budget === "number") {
+                    daten.uebertrag = alterUebertrag;
+                    daten.wochenBudget = daten.budget === alterUebertrag
+                        ? letzteWoche.budget
+                        : daten.budget;
+                    daten.budget = daten.wochenBudget + daten.uebertrag;
+                } else {
+                    daten.wochenBudget = daten.budget;
+                    daten.uebertrag = 0;
+                }
+            }
+
+            // Beim Update den früheren Standardwert einmalig auf 50 € anheben.
+            // Ausgaben, Verlauf und ein vorhandener Übertrag bleiben erhalten.
+            if (geladen.datenVersion !== DATEN_VERSION) {
+                if (daten.wochenBudget === 40) {
+                    daten.wochenBudget = STANDARD_BUDGET;
+                    daten.budget = STANDARD_BUDGET + daten.uebertrag;
+                }
+
+                // Ohne abgeschlossene Woche kann kein Übertrag übrig bleiben.
+                // Das bereinigt alte Einträge, die vor der Budgetkorrektur gelöscht wurden.
+                if (daten.wochenHistorie.length === 0 && daten.uebertrag !== 0) {
+                    daten.uebertrag = 0;
+                    daten.budget = daten.wochenBudget;
+                }
+
+                daten.datenVersion = DATEN_VERSION;
+                datenSpeichern();
             }
         } catch (fehler) {
             console.log("Gespeicherte Daten konnten nicht geladen werden.");
@@ -163,7 +215,7 @@ function anzeigeAktualisieren() {
     const werte = berechnung();
 
     document.getElementById("budget").textContent =
-        euro(daten.budget);
+        euro(daten.wochenBudget);
 
     document.getElementById("ausgegeben").textContent =
         euro(werte.ausgegeben);
@@ -199,6 +251,145 @@ function anzeigeAktualisieren() {
     }
 
     ausgabenAnzeigen();
+    wochenHistorieAnzeigen();
+}
+
+
+// ==========================================
+// WOCHENÜBERSICHT
+// ==========================================
+
+function wochenHistorieAnzeigen() {
+    const liste = document.getElementById("wochenListe");
+    liste.innerHTML = "";
+    document.getElementById("anzahlWochen").textContent =
+        daten.wochenHistorie.length;
+
+    if (daten.wochenHistorie.length === 0) {
+        const leer = document.createElement("div");
+        leer.className = "empty";
+        leer.textContent = "Abgeschlossene Wochen erscheinen hier.";
+        liste.appendChild(leer);
+        return;
+    }
+
+    daten.wochenHistorie.forEach(woche => {
+        const eintrag = document.createElement("details");
+        eintrag.className = "week-history-item";
+
+        const titel = document.createElement("summary");
+        titel.textContent = `Abgeschlossen am ${datumFuerAnzeige(woche.abgeschlossenAm)}`;
+        eintrag.appendChild(titel);
+
+        const controls = document.createElement("div");
+        controls.className = "week-history-controls";
+
+        const summen = document.createElement("div");
+        summen.className = "week-history-totals";
+        summen.textContent = `Startbudget: ${euro(woche.budget)} · Ausgegeben: ${euro(woche.ausgegeben)} · Übertrag (+/−): ${euro(woche.uebertrag)} · Nächste Woche: ${euro(woche.naechstesBudget ?? woche.uebertrag)}`;
+        controls.appendChild(summen);
+
+        const loeschenButton = document.createElement("button");
+        loeschenButton.type = "button";
+        loeschenButton.className = "delete-week-button";
+        loeschenButton.textContent = "Löschen";
+        loeschenButton.setAttribute("aria-label", `Woche vom ${datumFuerAnzeige(woche.abgeschlossenAm)} löschen`);
+        loeschenButton.addEventListener("click", event => {
+            event.stopPropagation();
+            if (!confirm(
+                `Möchtest du die Woche vom ${datumFuerAnzeige(woche.abgeschlossenAm)} mit ihren Ausgaben aus der Übersicht löschen? ` +
+                "Das aktuelle Budget wird anhand der verbleibenden Wochen neu berechnet."
+            )) {
+                return;
+            }
+
+            const index = daten.wochenHistorie.indexOf(woche);
+            if (index === -1) {
+                return;
+            }
+
+            daten.wochenHistorie.splice(index, 1);
+            wochenHistorieNeuBerechnen();
+            datenSpeichern();
+            anzeigeAktualisieren();
+        });
+        controls.appendChild(loeschenButton);
+        eintrag.appendChild(controls);
+
+        const ausgaben = document.createElement("div");
+        ausgaben.className = "week-history-expenses";
+        (woche.ausgaben || []).forEach(ausgabe => {
+            const zeile = document.createElement("div");
+            zeile.className = "week-history-expense";
+            const beschreibung = document.createElement("span");
+            beschreibung.textContent = `${ausgabe.beschreibung} · ${datumFuerAnzeige(ausgabe.datum)}`;
+            const betrag = document.createElement("strong");
+            betrag.textContent = euro(ausgabe.betrag);
+            zeile.append(beschreibung, betrag);
+            ausgaben.appendChild(zeile);
+        });
+        if (!woche.ausgaben || woche.ausgaben.length === 0) {
+            ausgaben.textContent = "Keine Ausgaben in dieser Woche.";
+        }
+        eintrag.appendChild(ausgaben);
+        liste.appendChild(eintrag);
+    });
+}
+
+
+function wochenHistorieNeuBerechnen() {
+    let uebertragAusVorwoche = 0;
+
+    // Die Historie ist neueste Woche zuerst gespeichert, daher rückwärts rechnen.
+    for (let i = daten.wochenHistorie.length - 1; i >= 0; i--) {
+        const woche = daten.wochenHistorie[i];
+        const wochenBudget = typeof woche.wochenBudget === "number"
+            ? woche.wochenBudget
+            : typeof woche.budget === "number"
+                ? woche.budget - uebertragAusVorwoche
+                : daten.wochenBudget;
+        const ausgegeben = typeof woche.ausgegeben === "number"
+            ? woche.ausgegeben
+            : (woche.ausgaben || []).reduce(
+                (summe, ausgabe) => summe + (ausgabe.betrag || 0),
+                0
+            );
+
+        woche.wochenBudget = wochenBudget;
+        woche.budget = wochenBudget + uebertragAusVorwoche;
+        woche.ausgegeben = ausgegeben;
+        woche.uebertrag = woche.budget - ausgegeben;
+        woche.naechstesBudget = wochenBudget + woche.uebertrag;
+        uebertragAusVorwoche = woche.uebertrag;
+    }
+
+    daten.uebertrag = uebertragAusVorwoche;
+    daten.budget = daten.wochenBudget + uebertragAusVorwoche;
+}
+
+
+function wochenabschlussAnzeigen(woche) {
+    const text = document.getElementById("weekSummaryText");
+    text.textContent = `Startbudget: ${euro(woche.budget)} · Ausgegeben: ${euro(woche.ausgegeben)} · Übertrag (+/−): ${euro(woche.uebertrag)}. Das Wochenbudget von ${euro(woche.wochenBudget)} wird mit diesem Übertrag verrechnet. Das neue Startbudget beträgt ${euro(woche.naechstesBudget)}.`;
+
+    const liste = document.getElementById("weekSummaryExpenses");
+    liste.innerHTML = "";
+    if (woche.ausgaben.length === 0) {
+        liste.textContent = "Keine Ausgaben in dieser Woche.";
+    } else {
+        woche.ausgaben.forEach(ausgabe => {
+            const zeile = document.createElement("div");
+            zeile.className = "week-summary-expense";
+            const beschreibung = document.createElement("span");
+            beschreibung.textContent = `${ausgabe.beschreibung} · ${datumFuerAnzeige(ausgabe.datum)}`;
+            const betrag = document.createElement("strong");
+            betrag.textContent = euro(ausgabe.betrag);
+            zeile.append(beschreibung, betrag);
+            liste.appendChild(zeile);
+        });
+    }
+
+    document.getElementById("weekSummaryModal").classList.remove("hidden");
 }
 
 
@@ -466,7 +657,7 @@ function bearbeitungSpeichern() {
 
 function budgetModalOeffnen() {
     document.getElementById("neuesBudget").value =
-        daten.budget.toFixed(2).replace(".", ",");
+        daten.wochenBudget.toFixed(2).replace(".", ",");
 
     document
         .getElementById("budgetModal")
@@ -493,7 +684,8 @@ function budgetSpeichern() {
         return;
     }
 
-    daten.budget = neuesBudget;
+    daten.wochenBudget = neuesBudget;
+    daten.budget = neuesBudget + daten.uebertrag;
     datenSpeichern();
 
     document
@@ -511,19 +703,36 @@ function budgetSpeichern() {
 function neueWoche() {
     const bestaetigt = confirm(
         "Möchtest du wirklich eine neue Woche beginnen?\n\n" +
-        "Alle bisherigen Ausgaben werden gelöscht. " +
-        "Dein Budget bleibt erhalten."
+        "Die bisherige Woche wird archiviert. " +
+        "Ein positiver Rest wird addiert; ein Fehlbetrag wird abgezogen."
     );
 
     if (!bestaetigt) {
         return;
     }
 
+    const werte = berechnung();
+    const abgeschlosseneWoche = {
+        id: Date.now(),
+        abgeschlossenAm: heutigesDatum(),
+        budget: daten.budget,
+        wochenBudget: daten.wochenBudget,
+        ausgegeben: werte.ausgegeben,
+        // Ein positiver Saldo wird addiert, ein negativer Saldo abgezogen.
+        uebertrag: werte.verfuegbar,
+        naechstesBudget: daten.wochenBudget + werte.verfuegbar,
+        ausgaben: daten.ausgaben.map(ausgabe => ({ ...ausgabe }))
+    };
+
+    daten.wochenHistorie.unshift(abgeschlosseneWoche);
+    daten.uebertrag = abgeschlosseneWoche.uebertrag;
+    daten.budget = abgeschlosseneWoche.naechstesBudget;
     daten.ausgaben = [];
     ausgewaehlteAusgabe = null;
 
     datenSpeichern();
     anzeigeAktualisieren();
+    wochenabschlussAnzeigen(abgeschlosseneWoche);
 }
 
 
@@ -573,6 +782,12 @@ document
         document
             .getElementById("editModal")
             .classList.add("hidden");
+    });
+
+document
+    .getElementById("closeWeekSummary")
+    .addEventListener("click", () => {
+        document.getElementById("weekSummaryModal").classList.add("hidden");
     });
 
 
@@ -633,12 +848,28 @@ document
         }
     });
 
+document
+    .getElementById("weekSummaryModal")
+    .addEventListener("click", event => {
+        if (event.target.id === "weekSummaryModal") {
+            event.currentTarget.classList.add("hidden");
+        }
+    });
+
 
 // ==========================================
 // START
 // ==========================================
 
 datenLaden();
+
+// Ohne abgeschlossene Woche kann kein gültiger Übertrag existieren.
+// Alte oder zuvor gelöschte Verlaufsdaten dürfen das aktuelle Budget nicht verfälschen.
+if (daten.wochenHistorie.length === 0 && (daten.uebertrag !== 0 || daten.budget !== daten.wochenBudget)) {
+    daten.uebertrag = 0;
+    daten.budget = daten.wochenBudget;
+    datenSpeichern();
+}
 
 // Das Datumsfeld beim Start auf heute setzen
 document.getElementById("datum").value = heutigesDatum();

@@ -344,6 +344,86 @@ input::placeholder {
     margin-bottom: 15px;
 }
 
+.history-section {
+    margin-bottom: 15px;
+}
+
+.week-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.week-history-item {
+    background: var(--white);
+    border-radius: 15px;
+    padding: 13px 15px;
+    box-shadow: var(--shadow);
+}
+
+.week-history-item summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.week-history-totals {
+    color: var(--text-light);
+    font-size: 12px;
+    line-height: 1.6;
+    flex: 1;
+}
+
+.week-history-controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 9px;
+}
+
+.delete-week-button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    background: #FFF0F0;
+    color: var(--red);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.week-history-expenses,
+.week-summary-expenses {
+    margin-top: 9px;
+    border-top: 1px solid #E7EEEE;
+    padding-top: 7px;
+}
+
+.week-history-expense,
+.week-summary-expense {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.week-history-expense span:first-child,
+.week-summary-expense span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.week-summary-expenses:empty {
+    display: none;
+}
+
+.single-button {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+}
+
 .section-title {
     display: flex;
     align-items: center;
